@@ -25,16 +25,29 @@ self.addEventListener('install', (e) => {
 });
 
 self.addEventListener('fetch', (e) => {
-    e.respondWith((async () => {
-      const r = await caches.match(e.request);
-      console.log(`[Service Worker] Fetching resource: ${e.request.url}`);
-      if (r) { return r; }
-      const response = await fetch(e.request);
-      const cache = await caches.open(cacheName);
-      console.log(`[Service Worker] Caching new resource: ${e.request.url}`);
-      cache.put(e.request, response.clone());
-      return response;
-    })());
+    console.log(e.request.url);
+    var url = e.request.url;
+    var extension = url.split(".").pop();
+    if(extension == "html" ||
+            extension == "png" ||
+            extension == "ico" ||
+            extension == "css") {
+        e.respondWith(caches.match(e.request));
+    }else{
+        e.respondWith(
+            caches.open(cacheName).then(function (cache) {
+              return cache.match(e.request).then(function (response) {
+                return (
+                  response ||
+                  fetch(e.request).then(function (response) {
+                    cache.put(e.request, response.clone());
+                    return response;
+                  })
+                );
+              });
+            }),
+        );
+    }
 });
 
 self.addEventListener('activate', (e) => {
